@@ -19,7 +19,8 @@ class WPML_TM_Translate_Independently {
 
 	public function define_hooks() {
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
-		add_action( 'wp_ajax_icl_disconnect_posts', array( $this, 'handle_ajax_request' ) );
+		add_action( 'wp_ajax_icl_disconnect_posts', array( $this, 'ajax_disconnect_duplicates' ) );
+		add_action( 'wp_ajax_icl_check_duplicates', array( $this, 'ajax_check_duplicates' ) );
 	}
 
 	public function load_scripts() {
@@ -30,9 +31,16 @@ class WPML_TM_Translate_Independently {
 			array( 'jquery' ),
 			WPML_TM_TRANSLATE_INDEPENDENTLY_VERSION
 		);
+		$message = _x( 'Some posts have duplicated version.', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message .= _x( 'Would you like to translate them independently?', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		wp_localize_script(
+			'wpml_tm_translate_independently',
+			'wpml_tm_translate_independently',
+			array( 'confirm_message' => $message )
+		);
 	}
 
-	public function handle_ajax_request() {
+	public function ajax_disconnect_duplicates() {
 		global $iclTranslationManagement;
 		$post_ids = array_map( 'intval', $_POST['posts'] );
 
@@ -41,9 +49,8 @@ class WPML_TM_Translate_Independently {
 
 		$query = $this->query_helper( $post_ids, $limit, $offset );
 		while ( $offset < $query->found_posts ) {
-			while ( $query->have_posts() ) {
-				$query->the_post();
-				$iclTranslationManagement->reset_duplicate_flag( get_the_ID() );
+			foreach ( $query->posts as $post_id ) {
+				$iclTranslationManagement->reset_duplicate_flag( $post_id );
 			}
 			if ( $query->found_posts > $limit ) {
 				$offset += $limit;
@@ -56,11 +63,19 @@ class WPML_TM_Translate_Independently {
 		wp_send_json_success( __( 'Successfully disconnected posts', 'sitepress' ) );
 	}
 
+	public function ajax_check_duplicates() {
+		$post_ids = array_map( 'intval', $_POST['posts'] );
+		$query = $this->query_helper( $post_ids, 1, 0 );
+		wp_send_json_success( array( 'found_posts' => $query->found_posts ) );
+		wp_reset_postdata();
+	}
+
 	private function query_helper( $post_ids = array(), $limit = 100, $offset = 0 ) {
 		$args = array(
 			'post_type'       => 'any',
 			'posts_per_page'  => $limit,
 			'offset'          => $offset,
+			'fields'          => 'ids',
 			'meta_query'      => array(
 				array(
 					'key'     => '_icl_lang_duplicate_of',
