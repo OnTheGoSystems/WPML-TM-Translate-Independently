@@ -31,8 +31,9 @@ class WPML_TM_Translate_Independently {
 			array( 'jquery' ),
 			WPML_TM_TRANSLATE_INDEPENDENTLY_VERSION
 		);
-		$message = _x( 'Some posts have duplicated versions.', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
-		$message .= _x( 'Would you like to translate them independently?', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message = _x( 'Some posts have duplicated versions.', '1/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message .= _x( 'Would you like to translate them independently?', '2/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message .= _x( 'If you prefer not to do this you will lose translations when original document is updated.', '3/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
 		wp_localize_script(
 			'wpml_tm_translate_independently',
 			'wpml_tm_translate_independently',
