@@ -43,7 +43,7 @@ class WPML_TM_Translate_Independently {
 
 	public function ajax_disconnect_duplicates() {
 		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'pro-translation-icl' ) ) {
-			wp_send_json_error( array( 'found_posts' => 0 ) );
+			wp_send_json_error( __( 'Failed to disconnected posts', 'sitepress' ) );
 		}
 
 		global $iclTranslationManagement;

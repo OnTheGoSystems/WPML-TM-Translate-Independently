@@ -38,6 +38,10 @@
                                 nonce: nonce,
                                 posts: posts
                             }
+                        }).success(function (resp) {
+                            if (resp.data.success !== true) {
+                                alert(resp.data);
+                            }
                         });
                     }
                 }
