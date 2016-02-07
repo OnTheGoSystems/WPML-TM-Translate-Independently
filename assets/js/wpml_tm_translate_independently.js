@@ -7,11 +7,15 @@
     $(function () {
         $('#icl_tm_dashboard_form').on('submit', function (e) {
             var form  = this,
-                posts = [];
+                posts = [],
+                nonce = '';
             e.preventDefault();
             $.each($(form).serializeArray(), function (i, field) {
                 if (-1 !== field.name.indexOf("checked")) {
                     posts.push(field.value);
+                }
+                if ('iclnonce' === field.name) {
+                    nonce = field.value;
                 }
             });
             $.ajax({
@@ -19,10 +23,11 @@
                 url: ajaxurl,
                 data: {
                     action: 'icl_check_duplicates',
+                    nonce: nonce,
                     posts: posts
                 }
             }).success(function (resp) {
-                if (resp.data.found_posts !== 0) {
+                if (resp.success === true && resp.data.found_posts !== 0) {
                     var answer = window.confirm(wpml_tm_translate_independently.confirm_message);
                     if (answer === true) {
                         $.ajax({
@@ -30,6 +35,7 @@
                             url: ajaxurl,
                             data: {
                                 action: 'icl_disconnect_posts',
+                                nonce: nonce,
                                 posts: posts
                             }
                         });
