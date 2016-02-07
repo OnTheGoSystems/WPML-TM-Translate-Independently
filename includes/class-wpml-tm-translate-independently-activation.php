@@ -1,5 +1,8 @@
 <?php
 
+if ( ! defined( 'WPINC' ) ) {
+	die;
+}
 
 class WPML_TM_Translate_Independently_Activation {
 
