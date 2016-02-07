@@ -20,7 +20,9 @@ class WPML_TM_Translate_Independently_Activation {
 	}
 
 	public function add_user_notice() {
-		echo '<div class="updated"><p><strong>WPML TM Translate Independently</strong> has been <strong>deactivated</strong>. It requires both "WPML Multilingual CMS" and "WPML Translation Management" to be active.</p></div>';
+		echo '<div class="updated"><p>';
+		echo __( 'WPML TM Translate Independently has been deactivated. It requires both "WPML Multilingual CMS" and "WPML Translation Management" to be active.', 'sitepress' );
+		echo '</p></div>';
 		if ( isset( $_GET['activate'] ) ) {
 			unset( $_GET['activate'] );
 		}
