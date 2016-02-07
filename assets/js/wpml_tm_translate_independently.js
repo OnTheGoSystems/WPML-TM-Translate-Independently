@@ -39,7 +39,7 @@
                                 posts: posts
                             }
                         }).success(function (resp) {
-                            if (resp.data.success !== true) {
+                            if (resp.success !== true) {
                                 alert(resp.data);
                             }
                         });
