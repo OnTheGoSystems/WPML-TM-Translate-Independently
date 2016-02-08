@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WPML TM Translate Independently
  * Plugin URI:  https://www.wpml.org/
- * Description: Allow to bulk disconnect duplicate posts.
+ * Description: Allow bulk disconnect duplicate posts from TM Dashboard.
  * Version:     0.0.1
  * Author:      OnTheGoSystems
  * Author URI:  http://www.onthegosystems.com/
