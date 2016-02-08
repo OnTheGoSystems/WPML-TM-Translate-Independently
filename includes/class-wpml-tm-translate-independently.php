@@ -31,9 +31,9 @@ class WPML_TM_Translate_Independently {
 			array( 'jquery' ),
 			WPML_TM_TRANSLATE_INDEPENDENTLY_VERSION
 		);
-		$message = _x( 'Some posts have duplicated versions.', '1/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
-		$message .= _x( 'Would you like to translate them independently?', '2/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
-		$message .= _x( 'If you prefer not to do this you will lose translations when original document is updated.', '3/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message = esc_html_x( 'Some posts have duplicated versions.', '1/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message .= esc_html_x( 'Would you like to translate them independently?', '2/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message .= esc_html_x( 'If you prefer not to do this you will lose translations when original document is updated.', '3/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
 		wp_localize_script(
 			'wpml_tm_translate_independently',
 			'wpml_tm_translate_independently',
@@ -43,7 +43,7 @@ class WPML_TM_Translate_Independently {
 
 	public function ajax_disconnect_duplicates() {
 		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'pro-translation-icl' ) ) {
-			wp_send_json_error( __( 'Failed to disconnected posts', 'sitepress' ) );
+			wp_send_json_error( esc_html__( 'Failed to disconnected posts', 'sitepress' ) );
 		}
 
 		global $iclTranslationManagement;
@@ -65,7 +65,7 @@ class WPML_TM_Translate_Independently {
 			}
 		}
 		wp_reset_postdata();
-		wp_send_json_success( __( 'Successfully disconnected posts', 'sitepress' ) );
+		wp_send_json_success( esc_html__( 'Successfully disconnected posts', 'sitepress' ) );
 	}
 
 	public function ajax_check_duplicates() {
