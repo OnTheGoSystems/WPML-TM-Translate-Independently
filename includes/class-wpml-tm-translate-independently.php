@@ -18,11 +18,54 @@ class WPML_TM_Translate_Independently {
 	}
 
 	public function define_hooks() {
+		add_action( 'current_screen', array( $this, 'is_basket' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
 		add_action( 'wp_ajax_icl_disconnect_posts', array( $this, 'ajax_disconnect_duplicates' ) );
 		add_action( 'wp_ajax_icl_check_duplicates', array( $this, 'ajax_check_duplicates' ) );
 	}
 
+	/**
+	 * Check if current admin screen is TM basket.
+	 */
+	public function is_basket() {
+		$screen = get_current_screen();
+		if (
+			'wpml_page_wpml-translation-management/menu/main' === $screen->id
+			&&
+		    isset( $_GET['sm'] )
+			&&
+		    'basket' === $_GET['sm']
+			&&
+		    is_admin()
+		) {
+			add_action( 'admin_footer', array( $this, 'add_hidden_field' ) );
+		}
+	}
+
+	/**
+	 * Add hidden fields to TM basket.
+	 * #icl_duplicate_post_in_basket with list of ids in basket.
+	 * #icl_disconnect_nonce nonce for AJAX call.
+	 */
+	public function add_hidden_field() {
+		if ( class_exists( 'TranslationProxy_Basket' ) ) {
+			$basket = TranslationProxy_Basket::get_basket( true );
+			if ( ! isset( $basket['post'] ) ) {
+				return;
+			}
+			$post_ids = array_map( 'intval', array_keys( $basket['post'] ) );
+			if ( true === $this->duplicated_posts_found( $post_ids ) ) :
+				?>
+				<input type="hidden" value="<?php echo implode( ',', $post_ids ); ?>" id="icl_duplicate_post_in_basket">
+				<input type="hidden" value="<?php echo wp_create_nonce( 'icl_disconnect_duplicates' ); ?>" id="icl_disconnect_nonce">
+				<?php
+			endif;
+		}
+	}
+
+	/**
+	 * Load JS scripts.
+	 */
 	public function load_scripts() {
 		$min = defined( 'SCRIPT_DEBUG' ) && true === SCRIPT_DEBUG ? '' : '.min';
 		wp_enqueue_script(
@@ -31,23 +74,32 @@ class WPML_TM_Translate_Independently {
 			array( 'jquery' ),
 			WPML_TM_TRANSLATE_INDEPENDENTLY_VERSION
 		);
-		$message = esc_html_x( 'Some posts have duplicated versions.', '1/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
-		$message .= esc_html_x( 'Would you like to translate them independently?', '2/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
-		$message .= esc_html_x( 'If you prefer not to do this you will lose translations when original document is updated.', '3/3 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message = esc_html_x( 'You are about to translate posts that are duplicated.', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message .= esc_html_x( 'These items will be automatically disconnected from originals, so that translation is not lost when you update the originals.', '2/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
 		wp_localize_script(
 			'wpml_tm_translate_independently',
 			'wpml_tm_translate_independently',
-			array( 'confirm_message' => $message )
+			array( 'message' => $message )
 		);
 	}
 
+	/**
+	 * AJAX action to bulk disconnect posts before sending them to translation.
+	 */
 	public function ajax_disconnect_duplicates() {
-		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'pro-translation-icl' ) ) {
+		global $iclTranslationManagement;
+
+		// Check nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'icl_disconnect_duplicates' ) ) {
 			wp_send_json_error( esc_html__( 'Failed to disconnected posts', 'sitepress' ) );
 		}
 
-		global $iclTranslationManagement;
-		$post_ids = array_map( 'intval', $_POST['posts'] );
+		// Get post basket post ids.
+		$post_ids = isset( $_POST['posts'] ) ? explode( ',', $_POST['posts'] ) : array();
+		if ( empty( $post_ids ) ) {
+			wp_send_json_error( esc_html__( 'No duplicate posts found to disconnect.', 'sitepress' ) );
+		}
+		$post_ids = array_map( 'intval', $post_ids );
 
 		$limit = 500;
 		$offset = 0;
@@ -68,19 +120,34 @@ class WPML_TM_Translate_Independently {
 		wp_send_json_success( esc_html__( 'Successfully disconnected posts', 'sitepress' ) );
 	}
 
-	public function ajax_check_duplicates() {
-		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'pro-translation-icl' ) ) {
-			wp_send_json_error( array( 'found_posts' => 0 ) );
+	/**
+	 * Check if any of the given posts have duplicates.
+	 * @param array $post_ids
+	 *
+	 * @return bool
+	 */
+	public function duplicated_posts_found( $post_ids ) {
+		$found_duplicates = false;
+		$query = $this->query_helper( $post_ids, 1 );
+		if ( 0 !== $query->found_posts ) {
+			$found_duplicates = true;
 		}
-		$post_ids = array_map( 'intval', $_POST['posts'] );
-		$query = $this->query_helper( $post_ids, 1, 0 );
-		wp_send_json_success( array( 'found_posts' => $query->found_posts ) );
 		wp_reset_postdata();
+		return $found_duplicates;
 	}
 
-	private function query_helper( $post_ids = array(), $limit = 100, $offset = 0 ) {
+	/**
+	 * WP_Query helper function.
+	 * @param array $post_ids
+	 * @param int $limit
+	 * @param int $offset
+	 *
+	 * @return WP_Query
+	 */
+	public function query_helper( $post_ids = array(), $limit = 100, $offset = 0 ) {
 		$args = array(
 			'post_type'              => 'any',
+
 			'posts_per_page'         => $limit,
 			'offset'                 => $offset,
 			'fields'                 => 'ids',
@@ -92,7 +159,7 @@ class WPML_TM_Translate_Independently {
 				),
 			),
 			'suppress_filters'       => true,
-			'update_post_term_cache' => false
+			'update_post_term_cache' => false,
 		);
 		return new WP_Query( $args );
 	}
