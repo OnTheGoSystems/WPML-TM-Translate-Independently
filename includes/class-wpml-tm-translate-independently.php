@@ -80,18 +80,19 @@ class WPML_TM_Translate_Independently {
 
 	private function query_helper( $post_ids = array(), $limit = 100, $offset = 0 ) {
 		$args = array(
-			'post_type'       => 'any',
-			'posts_per_page'  => $limit,
-			'offset'          => $offset,
-			'fields'          => 'ids',
-			'meta_query'      => array(
+			'post_type'              => 'any',
+			'posts_per_page'         => $limit,
+			'offset'                 => $offset,
+			'fields'                 => 'ids',
+			'meta_query'             => array(
 				array(
 					'key'     => '_icl_lang_duplicate_of',
 					'value'   => $post_ids,
 					'compare' => 'IN',
 				),
 			),
-			'suppress_filters' => true,
+			'suppress_filters'       => true,
+			'update_post_term_cache' => false
 		);
 		return new WP_Query( $args );
 	}
