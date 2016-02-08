@@ -149,7 +149,6 @@ class WPML_TM_Translate_Independently {
 	public function query_helper( $post_ids = array(), $limit = 100, $offset = 0 ) {
 		$args = array(
 			'post_type'              => 'any',
-
 			'posts_per_page'         => $limit,
 			'offset'                 => $offset,
 			'fields'                 => 'ids',
@@ -163,6 +162,17 @@ class WPML_TM_Translate_Independently {
 			'suppress_filters'       => true,
 			'update_post_term_cache' => false,
 		);
-		return new WP_Query( $args );
+		$query_parents = new WP_Query( $args );
+		wp_reset_postdata();
+		$args['post__in'] = $post_ids;
+		$args['meta_query'] = array(
+			array(
+				'key'     => '_icl_lang_duplicate_of',
+				'compare' => 'EXISTS',
+			),
+		);
+		$query_duplicates = new WP_Query( $args );
+		wp_reset_postdata();
+		return (object) array_merge( (array) $query_parents, (array) $query_duplicates );
 	}
 }
