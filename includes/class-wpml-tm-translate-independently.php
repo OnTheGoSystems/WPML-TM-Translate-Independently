@@ -74,8 +74,10 @@ class WPML_TM_Translate_Independently {
 			array( 'jquery' ),
 			WPML_TM_TRANSLATE_INDEPENDENTLY_VERSION
 		);
-		$message = esc_html_x( 'You are about to translate posts that are duplicated.', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
-		$message .= esc_html_x( 'These items will be automatically disconnected from originals, so that translation is not lost when you update the originals.', '2/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message = "----\n";
+		$message .= esc_html_x( 'You are about to translate duplicated posts.', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message .= esc_html_x( 'These items will be automatically disconnected from originals, so translation is not lost when you update the originals.', '2/2 Confirm to disconnect duplicates', 'sitepress' );
+		$message .= "\n----";
 		wp_localize_script(
 			'wpml_tm_translate_independently',
 			'wpml_tm_translate_independently',
