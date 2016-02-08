@@ -6,7 +6,14 @@ if ( ! defined( 'WPINC' ) ) {
 
 class WPML_TM_Translate_Independently {
 
-	public function __construct() {
+	/**
+	 * ICL TM Object
+	 */
+	public $icl_tm;
+
+
+	public function __construct( $iclTranslationManagement ) {
+		$this->icl_tm = $iclTranslationManagement;
 		add_action( 'plugins_loaded', array( $this, 'init' ) );
 	}
 
@@ -89,8 +96,6 @@ class WPML_TM_Translate_Independently {
 	 * AJAX action to bulk disconnect posts before sending them to translation.
 	 */
 	public function ajax_disconnect_duplicates() {
-		global $iclTranslationManagement;
-
 		// Check nonce.
 		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'icl_disconnect_duplicates' ) ) {
 			wp_send_json_error( esc_html__( 'Failed to disconnected posts', 'sitepress' ) );
@@ -107,15 +112,15 @@ class WPML_TM_Translate_Independently {
 		$offset = 0;
 
 		$query = $this->query_helper( $post_ids, $limit, $offset );
-		while ( $offset < $query->found_posts ) {
-			foreach ( $query->posts as $post_id ) {
-				$iclTranslationManagement->reset_duplicate_flag( $post_id );
+		while ( $offset < $query['found_posts'] ) {
+			foreach ( $query['posts']as $post_id ) {
+				$this->icl_tm->reset_duplicate_flag( $post_id );
 			}
-			if ( $query->found_posts > $limit ) {
+			if ( $query['found_posts'] > $limit ) {
 				$offset += $limit;
 				$query = $this->query_helper( $post_ids, $limit, $offset );
 			} else {
-				$offset = $query->found_posts;
+				$offset = $query['found_posts'];
 			}
 		}
 		wp_reset_postdata();
@@ -131,7 +136,7 @@ class WPML_TM_Translate_Independently {
 	public function duplicated_posts_found( $post_ids ) {
 		$found_duplicates = false;
 		$query = $this->query_helper( $post_ids, 1 );
-		if ( 0 !== $query->found_posts ) {
+		if ( 0 !== $query['found_posts'] ) {
 			$found_duplicates = true;
 		}
 		wp_reset_postdata();
@@ -147,7 +152,9 @@ class WPML_TM_Translate_Independently {
 	 * @return WP_Query
 	 */
 	public function query_helper( $post_ids = array(), $limit = 100, $offset = 0 ) {
+		$output = array();
 		$args = array(
+			'post__in'               => $post_ids,
 			'post_type'              => 'any',
 			'posts_per_page'         => $limit,
 			'offset'                 => $offset,
@@ -155,24 +162,38 @@ class WPML_TM_Translate_Independently {
 			'meta_query'             => array(
 				array(
 					'key'     => '_icl_lang_duplicate_of',
-					'value'   => $post_ids,
-					'compare' => 'IN',
+					'compare' => 'EXISTS',
 				),
 			),
 			'suppress_filters'       => true,
 			'update_post_term_cache' => false,
 		);
-		$query_parents = new WP_Query( $args );
-		wp_reset_postdata();
-		$args['post__in'] = $post_ids;
+		// Query to find duplicated versions.
+		$query_duplicates = new WP_Query( $args );
+		if ( 0 !== $query_duplicates->found_posts() ) {
+			foreach ( $query_duplicates->posts as $post_id ) {
+				$parent_post_id = get_post_meta( $post_id, '_icl_lang_duplicate_of', true );
+				if ( '' !== $parent_post_id ) {
+					$post_ids[] = $parent_post_id;
+				}
+			}
+		}
+
+		unset( $args['post__in'] );
 		$args['meta_query'] = array(
 			array(
 				'key'     => '_icl_lang_duplicate_of',
-				'compare' => 'EXISTS',
+				'value'   => $post_ids,
+				'compare' => 'IN',
 			),
 		);
-		$query_duplicates = new WP_Query( $args );
+		// Query to find originals.
+		$query_parents = new WP_Query( $args );
 		wp_reset_postdata();
-		return (object) array_merge( (array) $query_parents, (array) $query_duplicates );
+
+		$output['found_posts'] = $query_parents->found_posts + $query_duplicates->found_posts;
+		$output['posts'] = array_merge( $query_parents->posts, $query_duplicates->posts );
+
+		return $output;
 	}
 }

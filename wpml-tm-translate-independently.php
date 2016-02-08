@@ -21,5 +21,6 @@ require_once WPML_TM_TRANSLATE_INDEPENDENTLY_PATH . 'includes/class-wpml-tm-tran
 require_once WPML_TM_TRANSLATE_INDEPENDENTLY_PATH . 'includes/class-wpml-tm-translate-independently.php';
 
 // Init plugin.
-$wpml_tm_trnaslate_independently = new WPML_TM_Translate_Independently();
+global $iclTranslationManagement;
+$wpml_tm_trnaslate_independently = new WPML_TM_Translate_Independently( $iclTranslationManagement );
 $wpml_tm_trnaslate_independently_activation = new WPML_TM_Translate_Independently_Activation();
