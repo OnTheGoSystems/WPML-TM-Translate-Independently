@@ -199,9 +199,11 @@ class WPML_TM_Translate_Independently {
 	public function get_duplicated_originals_args( $post_ids ) {
 		return array(
 			'meta_query' => array(
-				'key'     => '_icl_lang_duplicate_of',
-				'value'   => $post_ids,
-				'compare' => 'IN',
+				array(
+					'key'     => '_icl_lang_duplicate_of',
+					'value'   => $post_ids,
+					'compare' => 'IN',
+				),
 			),
 		);
 	}
