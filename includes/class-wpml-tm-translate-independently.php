@@ -85,10 +85,8 @@ class WPML_TM_Translate_Independently {
 			array( 'jquery' ),
 			WPML_TM_TRANSLATE_INDEPENDENTLY_VERSION
 		);
-		$message = "----\n";
-		$message .= esc_html_x( 'You are about to translate duplicated posts.', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
+		$message = esc_html_x( 'You are about to translate duplicated posts.', '1/2 Confirm to disconnect duplicates', 'sitepress' ) . "\n";
 		$message .= esc_html_x( 'These items will be automatically disconnected from originals, so translation is not lost when you update the originals.', '2/2 Confirm to disconnect duplicates', 'sitepress' );
-		$message .= "\n----";
 		wp_localize_script(
 			'wpml_tm_translate_independently',
 			'wpml_tm_translate_independently',
@@ -113,9 +111,10 @@ class WPML_TM_Translate_Independently {
 		$post_ids = array_map( 'intval', $post_ids );
 
 		// Get originals from duplicates posts.
-		$post_ids = $this->get_duplicated_posts( $post_ids );
+		$this->disconnect_helper( $post_ids, $this->get_duplicate_args( $post_ids ) );
+
 		// Disconnect all duplicates.
-		$this->disconnect_duplicated_origianls( $post_ids );
+		$this->disconnect_helper( $post_ids, $this->get_duplicated_originals_args( $post_ids ) );
 
 		wp_send_json_success( esc_html__( 'Successfully disconnected posts', 'sitepress' ) );
 	}
@@ -128,21 +127,13 @@ class WPML_TM_Translate_Independently {
 	 */
 	public function duplicated_posts_found( $post_ids ) {
 		$found_duplicates = false;
-		$args = array(
-			array(
-				'meta_query' => array(
-					'key'     => '_icl_lang_duplicate_of',
-					'value'   => $post_ids,
-					'compare' => 'IN',
-				),
-			),
-		);
 
-		$query = $this->query_helper( $post_ids, 1, 0, $args );
-		if ( 0 !== $query['found_posts'] ) {
+		$query_o = $this->query_helper( $post_ids, 1, 0, $this->get_duplicate_args( $post_ids ) );
+		$query_d = $this->query_helper( $post_ids, 1, 0, $this->get_duplicated_originals_args( $post_ids ) );
+
+		if ( 0 !== $query_d['found_posts'] || 0 !== $query_o['found_posts'] ) {
 			$found_duplicates = true;
 		}
-		wp_reset_postdata();
 		return $found_duplicates;
 	}
 
@@ -161,12 +152,6 @@ class WPML_TM_Translate_Independently {
 			'posts_per_page'         => $limit,
 			'offset'                 => $offset,
 			'fields'                 => 'ids',
-			'meta_query'             => array(
-				array(
-					'key'     => '_icl_lang_duplicate_of',
-					'compare' => 'EXISTS',
-				),
-			),
 			'suppress_filters'       => true,
 			'update_post_term_cache' => false,
 		);
@@ -178,44 +163,13 @@ class WPML_TM_Translate_Independently {
 		$query = new WP_Query( $query_args );
 		$output['found_posts'] = $query->found_posts;
 		$output['posts'] = $query->posts;
+
 		wp_reset_postdata();
 		return $output;
 	}
 
-	public function get_duplicated_posts( $post_ids ) {
+	public function disconnect_helper( $post_ids, $args ) {
 		$offset = 0;
-		$args = array(
-			'post__in' => $post_ids,
-		);
-		$query = $this->query_helper( $post_ids, $this->limit, $offset, $args );
-		while ( $offset < $query['found_posts'] ) {
-			foreach ( $query['posts'] as $post_id ) {
-				$parent_post_id = get_post_meta( $post_id, '_icl_lang_duplicate_of', true );
-				if ( '' !== $parent_post_id ) {
-					$post_ids[] = $parent_post_id;
-				}
-			}
-			if ( $query['found_posts'] > $this->limit ) {
-				$offset += $this->limit;
-				$query = $this->query_helper( $post_ids, $this->limit, $offset, $args );
-			} else {
-				$offset = $query['found_posts'];
-			}
-		}
-
-		return $post_ids;
-	}
-
-	public function disconnect_duplicated_origianls( $post_ids ) {
-		$offset = 0;
-		$args = array(
-			'meta_query' => array(
-				'key'     => '_icl_lang_duplicate_of',
-				'value'   => $post_ids,
-				'compare' => 'IN',
-			),
-		);
-
 		$query = $this->query_helper( $post_ids, $this->limit, $offset, $args );
 		while ( $offset < $query['found_posts'] ) {
 			foreach ( $query['posts'] as $post_id ) {
@@ -228,5 +182,27 @@ class WPML_TM_Translate_Independently {
 				$offset = $query['found_posts'];
 			}
 		}
+	}
+
+	public function get_duplicate_args( $post_ids ) {
+		return array(
+			'post__in' => $post_ids,
+			'meta_query' => array(
+				array(
+					'key'     => '_icl_lang_duplicate_of',
+					'compare' => 'EXISTS',
+				),
+			),
+		);
+	}
+
+	public function get_duplicated_originals_args( $post_ids ) {
+		return array(
+			'meta_query' => array(
+				'key'     => '_icl_lang_duplicate_of',
+				'value'   => $post_ids,
+				'compare' => 'IN',
+			),
+		);
 	}
 }

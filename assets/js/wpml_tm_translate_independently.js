@@ -9,8 +9,12 @@
             button = $('.button-primary'),
             nonce = document.getElementById('icl_disconnect_nonce');
         if (duplicated !== null) {
-            alert(wpml_tm_translate_independently.message);
-            button.on('click', function () {
+            button.on('click', function (e) {
+                //alert(wpml_tm_translate_independently.message);
+                $('<div/>', {
+                    class: 'updated',
+                    text: wpml_tm_translate_independently.message
+                }).insertBefore(button);
                 $.ajax({
                     method: "POST",
                     url: ajaxurl,
