@@ -19,7 +19,6 @@ class WPML_TM_Translate_Independently {
 
 	public function __construct( $iclTranslationManagement ) {
 		$this->icl_tm = $iclTranslationManagement;
-		add_action( 'plugins_loaded', array( $this, 'init' ) );
 	}
 
 	/**
@@ -138,6 +137,7 @@ class WPML_TM_Translate_Independently {
 				),
 			),
 		);
+
 		$query = $this->query_helper( $post_ids, 1, 0, $args );
 		if ( 0 !== $query['found_posts'] ) {
 			$found_duplicates = true;

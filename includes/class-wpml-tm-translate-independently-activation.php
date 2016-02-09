@@ -6,8 +6,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 class WPML_TM_Translate_Independently_Activation {
 
-
-	public function __construct() {
+	public function init() {
 		add_action( 'admin_init', array( $this, 'check_dependencies' ) );
 	}
 
