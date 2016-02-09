@@ -113,7 +113,9 @@ class WPML_TM_Translate_Independently {
 		}
 		$post_ids = array_map( 'intval', $post_ids );
 
+		// Get originals from duplicates posts.
 		$post_ids = $this->get_duplicated_posts( $post_ids );
+		// Disconnect all duplicates.
 		$this->disconnect_duplicated_origianls( $post_ids );
 
 		wp_send_json_success( esc_html__( 'Successfully disconnected posts', 'sitepress' ) );
