@@ -11,6 +11,11 @@ class WPML_TM_Translate_Independently {
 	 */
 	public $icl_tm;
 
+	/**
+	 * Query limit.
+	 * @var int
+	 */
+	public $limit = 500;
 
 	public function __construct( $iclTranslationManagement ) {
 		$this->icl_tm = $iclTranslationManagement;
@@ -108,22 +113,9 @@ class WPML_TM_Translate_Independently {
 		}
 		$post_ids = array_map( 'intval', $post_ids );
 
-		$limit = 500;
-		$offset = 0;
+		$post_ids = $this->get_duplicated_posts( $post_ids );
+		$this->disconnect_duplicated_origianls( $post_ids );
 
-		$query = $this->query_helper( $post_ids, $limit, $offset );
-		while ( $offset < $query['found_posts'] ) {
-			foreach ( $query['posts']as $post_id ) {
-				$this->icl_tm->reset_duplicate_flag( $post_id );
-			}
-			if ( $query['found_posts'] > $limit ) {
-				$offset += $limit;
-				$query = $this->query_helper( $post_ids, $limit, $offset );
-			} else {
-				$offset = $query['found_posts'];
-			}
-		}
-		wp_reset_postdata();
 		wp_send_json_success( esc_html__( 'Successfully disconnected posts', 'sitepress' ) );
 	}
 
@@ -135,7 +127,16 @@ class WPML_TM_Translate_Independently {
 	 */
 	public function duplicated_posts_found( $post_ids ) {
 		$found_duplicates = false;
-		$query = $this->query_helper( $post_ids, 1 );
+		$args = array(
+			array(
+				'meta_query' => array(
+					'key'     => '_icl_lang_duplicate_of',
+					'value'   => $post_ids,
+					'compare' => 'IN',
+				),
+			),
+		);
+		$query = $this->query_helper( $post_ids, 1, 0, $args );
 		if ( 0 !== $query['found_posts'] ) {
 			$found_duplicates = true;
 		}
@@ -151,10 +152,9 @@ class WPML_TM_Translate_Independently {
 	 *
 	 * @return WP_Query
 	 */
-	public function query_helper( $post_ids = array(), $limit = 100, $offset = 0 ) {
+	public function query_helper( $post_ids = array(), $limit = 100, $offset = 0, $args = array() ) {
 		$output = array();
-		$args = array(
-			'post__in'               => $post_ids,
+		$query_args = array(
 			'post_type'              => 'any',
 			'posts_per_page'         => $limit,
 			'offset'                 => $offset,
@@ -168,32 +168,63 @@ class WPML_TM_Translate_Independently {
 			'suppress_filters'       => true,
 			'update_post_term_cache' => false,
 		);
-		// Query to find duplicated versions.
-		$query_duplicates = new WP_Query( $args );
-		if ( 0 !== $query_duplicates->found_posts() ) {
-			foreach ( $query_duplicates->posts as $post_id ) {
+
+		if ( ! empty( $args ) ) {
+			$query_args = array_merge( $query_args, $args );
+		}
+
+		$query = new WP_Query( $query_args );
+		$output['found_posts'] = $query->found_posts;
+		$output['posts'] = $query->posts;
+		wp_reset_postdata();
+		return $output;
+	}
+
+	public function get_duplicated_posts( $post_ids ) {
+		$offset = 0;
+		$args = array(
+			'post__in' => $post_ids,
+		);
+		$query = $this->query_helper( $post_ids, $this->limit, $offset, $args );
+		while ( $offset < $query['found_posts'] ) {
+			foreach ( $query['posts'] as $post_id ) {
 				$parent_post_id = get_post_meta( $post_id, '_icl_lang_duplicate_of', true );
 				if ( '' !== $parent_post_id ) {
 					$post_ids[] = $parent_post_id;
 				}
 			}
+			if ( $query['found_posts'] > $this->limit ) {
+				$offset += $this->limit;
+				$query = $this->query_helper( $post_ids, $this->limit, $offset, $args );
+			} else {
+				$offset = $query['found_posts'];
+			}
 		}
 
-		unset( $args['post__in'] );
-		$args['meta_query'] = array(
-			array(
+		return $post_ids;
+	}
+
+	public function disconnect_duplicated_origianls( $post_ids ) {
+		$offset = 0;
+		$args = array(
+			'meta_query' => array(
 				'key'     => '_icl_lang_duplicate_of',
 				'value'   => $post_ids,
 				'compare' => 'IN',
 			),
 		);
-		// Query to find originals.
-		$query_parents = new WP_Query( $args );
-		wp_reset_postdata();
 
-		$output['found_posts'] = $query_parents->found_posts + $query_duplicates->found_posts;
-		$output['posts'] = array_merge( $query_parents->posts, $query_duplicates->posts );
-
-		return $output;
+		$query = $this->query_helper( $post_ids, $this->limit, $offset, $args );
+		while ( $offset < $query['found_posts'] ) {
+			foreach ( $query['posts'] as $post_id ) {
+				$this->icl_tm->reset_duplicate_flag( $post_id );
+			}
+			if ( $query['found_posts'] > $this->limit ) {
+				$offset += $this->limit;
+				$query = $this->query_helper( $post_ids, $this->limit, $offset, $args );
+			} else {
+				$offset = $query['found_posts'];
+			}
+		}
 	}
 }
