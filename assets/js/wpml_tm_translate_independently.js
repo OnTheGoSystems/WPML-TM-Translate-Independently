@@ -9,12 +9,12 @@
             button = $('.button-primary'),
             nonce = document.getElementById('icl_disconnect_nonce');
         if (duplicated !== null) {
-            button.on('click', function (e) {
-                //alert(wpml_tm_translate_independently.message);
-                $('<div/>', {
-                    class: 'updated',
-                    text: wpml_tm_translate_independently.message
-                }).insertBefore(button);
+            $('<div />', {
+                id: 'icl_disconnect_message',
+                text: wpml_tm_translate_independently.message,
+                style: 'margin: 5px 0 15px;border-left: 4px solid #46b450;padding: 1px 12px;'
+            }).insertBefore('.button-primary');
+            button.on('click', function () {
                 $.ajax({
                     method: "POST",
                     url: ajaxurl,
