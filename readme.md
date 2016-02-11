@@ -2,7 +2,7 @@
 
 ## Description
 "WPML TM Translate Independently" is small feature plugin which will allow to bulk disconnect duplicated posts from
-Translation Managment Dashboard screen before sending them for translation.
+Translation Managment Basket screen before sending them for translation.
 To use this plugin make sure to have "WPML Multilingual CMS" and "WPML Translation Management" installed and active.
 Eventually this plugin will be merged to WPML core.
 
