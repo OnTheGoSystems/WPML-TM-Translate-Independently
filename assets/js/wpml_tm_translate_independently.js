@@ -10,9 +10,8 @@
             nonce = document.getElementById('icl_disconnect_nonce');
         if (duplicated !== null) {
             $('<div />', {
-                id: 'icl_disconnect_message',
                 text: wpml_tm_translate_independently.message,
-                style: 'margin: 5px 0 15px;border-left: 4px solid #46b450;padding: 1px 12px;'
+                class: 'icl-admin-message-warning'
             }).insertBefore('.button-primary');
             button.on('click', function () {
                 $.ajax({
